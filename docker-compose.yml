@@ -1,0 +1,65 @@
+# docker-compose.yml  (версия 3.9 — Compose V2)
+version: "3.9"
+
+services:
+  web:
+    # ── Сборка prod-образа ──────────────────────────────
+    build:
+      context: .
+      dockerfile: Dockerfile      # multi-stage, см. ниже
+      target: builder
+    image: ghcr.io/finatlas/web:latest   # пушим в свой registry
+    deploy:
+      resources:
+        limits:
+          memory: 7g
+        reservations:
+          memory: 6g
+    environment:
+      - FLASK_ENV=production
+      - GUNICORN_WORKERS=1
+    stop_grace_period: 30s
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5000/healthz || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - backend
+    # root FS «только чтение», записывать можно в tmpfs 
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/tmp
+    security_opt:
+      - no-new-privileges:true
+
+  nginx:
+    image: jc21/nginx-proxy-manager:2
+    container_name: finatlas_proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - DISABLE_IPV6=true
+    volumes:
+      - proxy_data:/data
+      - proxy_letsencrypt:/etc/letsencrypt
+    depends_on:
+      - web
+    networks:
+      - backend
+      - frontend
+
+# ── Volumes & Networks ─────────────────────────────────
+volumes:
+  proxy_data:
+  proxy_letsencrypt:
+
+networks:
+  backend:
+    internal: true
+  frontend:
+    # публикуем только nginx (80/443) наружу

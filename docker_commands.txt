@@ -1,0 +1,7 @@
+docker build -t finatlas .
+docker run -p 5000:5000 finatlas
+
+
+docker build -t finatlas .
+docker tag 3f7c7ab64b2a324e5c8c76cd321cb60ead123d5ad3567af952b3a1f22ced2655(tag from docker app) nikorr0/finatlas:ver3_only_site
+docker push nikorr0/finatlas:ver3_only_site

@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Сравнение организаций</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --secondary: #10b981;
+            --accent: #f59e0b;
+            --dark: #1e293b;
+            --light: #f8fafc;
+            --gray: #94a3b8;
+            --card-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Montserrat', sans-serif; color: var(--dark); background-color: var(--light); line-height: 1.6; }
+        .container { width: 100%; max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+        .back-btn { display: inline-flex; align-items: center; gap: 8px; margin: 30px 0; color: var(--primary); text-decoration: none; font-weight: 500; transition: 0.3s; }
+        .back-btn:hover { color: var(--primary-dark); }
+        .comparison-header { margin-bottom: 30px; }
+        .comparison-title { font-family: 'Playfair Display', serif; font-size: 32px; margin-bottom: 10px; color: var(--dark); }
+        .comparison-subtitle { color: var(--gray); font-size: 16px; }
+        
+        .comparison-controls { 
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .controls-section {
+            background-color: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: var(--card-shadow);
+        }
+        .controls-section-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: var(--primary);
+        }
+        .universities-select-container {
+            margin-bottom: 20px;
+        }
+        .universities-select {
+            width: 100%;
+            min-height: 150px;
+            padding: 15px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+            background-color: white;
+        }
+        .params-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .chart-selector, .year-selector {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid var(--primary);
+            border-radius: 8px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 14px;
+            background-color: white;
+        }
+        .compare-btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+        }
+        .compare-btn:hover { 
+            background-color: var(--primary-dark); 
+            transform: translateY(-2px); 
+            box-shadow: var(--card-shadow); 
+        }
+        .no-years-message {
+            color: var(--accent);
+            font-weight: 500;
+            margin-top: 10px;
+            display: none;
+        }
+        
+        .charts-container { 
+            display: grid; 
+            grid-template-columns: 1fr; 
+            gap: 30px; 
+            margin-bottom: 50px; 
+        }
+        .chart-card { 
+            background-color: white; 
+            border-radius: 12px; 
+            padding: 30px; 
+            box-shadow: var(--card-shadow); 
+        }
+        .chart-title { 
+            font-family: 'Playfair Display', serif; 
+            font-size: 24px; 
+            margin-bottom: 20px; 
+            color: var(--primary); 
+            position: relative; 
+            padding-bottom: 10px; 
+        }
+        .chart-title::after { 
+            content: ''; 
+            position: absolute; 
+            bottom: 0; 
+            left: 0; 
+            width: 50px; 
+            height: 3px; 
+            background-color: var(--accent); 
+        }
+        .chart-wrapper { 
+            position: relative; 
+            height: 350px; 
+            width: 100%; 
+        }
+        
+        .universities-list { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); 
+            gap: 20px; 
+            margin-top: 30px; 
+            margin-bottom: 30px; 
+        }
+        .university-mini-card { 
+            background-color: white; 
+            border-radius: 8px; 
+            padding: 20px; 
+            box-shadow: var(--card-shadow); 
+            transition: 0.3s; 
+            border-left: 4px solid var(--primary); 
+        }
+        .university-mini-card:hover { 
+            transform: translateY(-5px); 
+            box-shadow: 0 15px 20px -5px rgba(0,0,0,0.1); 
+        }
+        .university-mini-name { 
+            font-weight: 600; 
+            margin-bottom: 10px; 
+            font-size: 16px; 
+        }
+        .university-mini-meta { 
+            display: flex; 
+            gap: 15px; 
+            margin-bottom: 10px; 
+            flex-wrap: wrap; 
+        }
+        .university-mini-type { 
+            font-size: 12px; 
+            color: white; 
+            padding: 2px 10px; 
+            border-radius: 4px; 
+            font-weight: 500; 
+        }
+        .university-mini-type.university { background-color: var(--primary); }
+        .university-mini-type.academy { background-color: var(--secondary); }
+        .university-mini-type.institute { background-color: var(--accent); }
+        .university-mini-location { 
+            font-size: 13px; 
+            color: var(--gray); 
+            display: flex; 
+            align-items: center; 
+            gap: 5px; 
+        }
+        .view-details-btn { 
+            display: inline-block; 
+            margin-top: 15px; 
+            color: var(--primary); 
+            text-decoration: none; 
+            font-size: 14px; 
+            font-weight: 500; 
+            transition: 0.3s; 
+        }
+        .view-details-btn:hover { 
+            color: var(--primary-dark); 
+            text-decoration: underline; 
+        }
+        
+        @media (max-width: 768px) { 
+            .params-row {
+                grid-template-columns: 1fr;
+            }
+            .universities-list { 
+                grid-template-columns: 1fr; 
+            } 
+            .chart-card { 
+                padding: 20px; 
+            } 
+            .chartjs-legend {
+                transform: scale(0.8) translateY(10px);
+            }
+            .chart-wrapper {
+                margin-top: 30px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="container header-container">
+            <div class="logo">
+                <div class="logo-icon"><i class="fas fa-chart-line"></i></div>
+                <div class="logo-text">
+                    <h1>ФинАтлас</h1>
+                    <p>Финансовый мониторинг организаций</p>
+                </div>
+            </div>
+            <nav>
+                <ul>
+                    <li class="main-button-page"><a href="/"><i class="fas fa-home"></i> Главная</a></li>
+                    <li><a href="comparison" class="nav-btn"><i class="fas fa-chart-bar"></i> Сравнить</a></li>
+                    <li><a href="download-excel" class="nav-btn"><i class="fas fa-file-excel"></i> Скачать Excel</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <a href="/" class="back-btn"><i class="fas fa-arrow-left"></i> Назад к поиску</a>
+        <div class="comparison-header">
+            <h1 class="comparison-title">Сравнение организаций</h1>
+            <p class="comparison-subtitle">Выберите до 5 организаций для сравнения ключевых показателей</p>
+        </div>
+        
+        <div class="controls-section">
+            <h3 class="controls-section-title">Выберите организации</h3>
+            <div class="universities-select-container">
+                <div id="org-multiselect" class="org-multiselect">
+                    <div class="org-search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="org-search-input" placeholder="Поиск по организациям...">
+                    </div>
+                    <div id="org-selected-list" class="org-selected-list"></div>
+                    <div id="org-options-list" class="org-options-list"></div>
+                </div>
+            </div>
+
+            
+            <div class="params-row">
+                <div>
+                    <h3 class="controls-section-title">Выберите показатель</h3>
+                    <select class="chart-selector" id="chartColumnSelector">
+                        <option value="">Выберите показатель</option>
+                    </select>
+                </div>
+                <div>
+                    <h3 class="controls-section-title">Выберите год</h3>
+                    <select class="year-selector" id="yearSelector" disabled>
+                        <option value="">Сначала выберите организации</option>
+                    </select>
+                    <div class="no-years-message" id="noYearsMessage">
+                        Общих годов для сравнения выбранных организаций не найдено
+                    </div>
+                </div>
+            </div>
+            
+            <button class="compare-btn" id="compare-btn" disabled>
+                <i class="fas fa-chart-bar"></i> Сравнить
+            </button>
+        </div>
+        
+        <div class="charts-container" id="charts-container">
+            <div class="chart-card">
+                <h2 class="chart-title" id="chartTitle">Сравнение показателей</h2>
+                <div class="chart-wrapper">
+                    <canvas id="financialChart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <h2 class="chart-title">Выбранные организации</h2>
+        <div class="universities-list" id="universities-list">
+            <!-- Карточки организаций для сравнения -->
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-col">
+                    <h4>ФинАтлас</h4>
+                    <p style="color: var(--gray); margin-bottom: 15px; font-size: 14px;">
+                        Система мониторинга финансовых показателей учреждений
+                    </p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>© 2025 ФинАтлас</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Получаем данные организаций из localStorage
+            const organizations = JSON.parse(localStorage.getItem('organizations')) || [];
+            const select = document.getElementById('universities-select');
+            const compareBtn = document.getElementById('compare-btn');
+            const universitiesList = document.getElementById('universities-list');
+            const chartColumnSelector = document.getElementById('chartColumnSelector');
+            const yearSelector = document.getElementById('yearSelector');
+            const noYearsMessage = document.getElementById('noYearsMessage');
+            let financialChart = null;
+            let allIndicators = [];
+            let financialData = [];
+            let availableYears = new Set();
+
+            let selectedOrgIds = [];
+            
+            // Загрузка наименований финансовых показателей
+            fetch('/api/indicators')
+            .then(response => response.json())
+            .then(data => {
+                const sortedIndicators = Object.entries(data).sort((a, b) => a[0].localeCompare(b[0]));
+                allIndicators = sortedIndicators.map(([code, name]) => ({
+                    code: `code_${code}`,
+                    name: `${code} - ${name}`
+                }));
+
+                const chartColumnSelector = document.getElementById('chartColumnSelector');
+                allIndicators.forEach(ind => {
+                    const option = document.createElement('option');
+                    option.value = ind.code;
+                    option.textContent = ind.name;
+                    chartColumnSelector.appendChild(option);
+                });
+            })
+            .catch(error => console.error('Ошибка загрузки индикаторов:', error));
+
+            const orgSearchInput = document.getElementById('org-search-input');
+            const orgOptionsList = document.getElementById('org-options-list');
+            const orgSelectedList = document.getElementById('org-selected-list');
+
+            function renderSelectedOrgs() {
+                orgSelectedList.innerHTML = '';
+                selectedOrgIds.forEach(id => {
+                    const org = organizations.find(o => o.id === id);
+                    if (!org) return;
+                    const chip = document.createElement('span');
+                    chip.className = 'org-chip';
+                    chip.innerHTML = `${org.name} <span class="remove-chip" title="Убрать">&#10005;</span>`;
+                    chip.querySelector('.remove-chip').onclick = () => {
+                        selectedOrgIds = selectedOrgIds.filter(oid => oid !== id);
+                        renderSelectedOrgs();
+                        renderOrgOptions();
+                        updateAvailableYears(selectedOrgIds);
+                        compareBtn.disabled = selectedOrgIds.length === 0;
+                    };
+                    orgSelectedList.appendChild(chip);
+                });
+            }
+
+            function renderOrgOptions(filter = '') {
+                orgOptionsList.innerHTML = '';
+                let countSelected = selectedOrgIds.length;
+                const maxCount = 5;
+                organizations
+                    .filter(org => !filter || (org.name + ' ' + org.address).toLowerCase().includes(filter.toLowerCase()))
+                    .forEach(org => {
+                        const row = document.createElement('div');
+                        row.className = 'org-option-row' + (countSelected >= maxCount && !selectedOrgIds.includes(org.id) ? ' disabled' : '');
+                        row.title = (countSelected >= maxCount && !selectedOrgIds.includes(org.id)) ? 'Можно выбрать не более 5 организаций' : '';
+                        row.innerHTML = `
+                            <input type="checkbox" ${selectedOrgIds.includes(org.id) ? 'checked' : ''} ${countSelected >= maxCount && !selectedOrgIds.includes(org.id) ? 'disabled' : ''}>
+                            <span class="org-option-label">${org.name} <span style="color:var(--gray); font-size:12px;">(${org.address})</span></span>
+                        `;
+                        const checkbox = row.querySelector('input[type="checkbox"]');
+                        checkbox.onchange = () => {
+                            if (checkbox.checked) {
+                                if (selectedOrgIds.length < maxCount) selectedOrgIds.push(org.id);
+                            } else {
+                                selectedOrgIds = selectedOrgIds.filter(id => id !== org.id);
+                            }
+                            renderSelectedOrgs();
+                            renderOrgOptions(orgSearchInput.value);
+                            updateAvailableYears(selectedOrgIds);
+                            compareBtn.disabled = selectedOrgIds.length === 0;
+                        };
+                        orgOptionsList.appendChild(row);
+                    });
+            }
+
+            // Поиск по вводу
+            orgSearchInput.addEventListener('input', () => {
+                renderOrgOptions(orgSearchInput.value);
+            });
+            // Начальный рендер
+            renderSelectedOrgs();
+            renderOrgOptions();
+
+            // Загружаем финансовые данные
+            fetch('/api/chart_data')
+                .then(response => response.json())
+                .then(data => {
+                    financialData = data;
+                    
+                    // Заполняем селектор показателей
+                    allIndicators.forEach(ind => {
+                        const option = document.createElement('option');
+                        option.value = ind.code;
+                        option.textContent = ind.name;
+                        chartColumnSelector.appendChild(option);
+                    });
+                })
+                .catch(error => console.error('Ошибка загрузки данных для графика:', error));
+
+
+            // Функция для обновления доступных годов
+            function updateAvailableYears(selectedIds) {
+                const selectedOrgs = organizations.filter(org => selectedIds.includes(org.id));
+                const orgNames = selectedOrgs.map(org => org.name);
+                
+                // Находим года, которые есть у всех выбранных организаций
+                const yearsByOrg = {};
+                orgNames.forEach(name => {
+                    yearsByOrg[name] = new Set();
+                });
+                
+                financialData.forEach(item => {
+                    if (orgNames.includes(item.name)) {
+                        yearsByOrg[item.name].add(item.year);
+                    }
+                });
+                
+                // Находим пересечение годов
+                let commonYears = null;
+                for (const name in yearsByOrg) {
+                    if (commonYears === null) {
+                        commonYears = new Set(yearsByOrg[name]);
+                    } else {
+                        commonYears = new Set([...commonYears].filter(year => 
+                            yearsByOrg[name].has(year)
+                        ));
+                    }
+                }
+                
+                // Обновляем селектор годов
+                yearSelector.innerHTML = '';
+                if (commonYears && commonYears.size > 0) {
+                    const sortedYears = Array.from(commonYears).sort((a, b) => b - a); // Сортируем по убыванию
+                    sortedYears.forEach(year => {
+                        const option = document.createElement('option');
+                        option.value = year;
+                        option.textContent = year;
+                        yearSelector.appendChild(option);
+                    });
+                    yearSelector.disabled = false;
+                    noYearsMessage.style.display = 'none';
+                } else {
+                    yearSelector.innerHTML = '<option value="">Нет общих годов</option>';
+                    yearSelector.disabled = true;
+                    noYearsMessage.style.display = 'block';
+                }
+            }
+
+            // Инициализация графика
+            function initChart() {
+                const ctx = document.getElementById('financialChart').getContext('2d');
+                financialChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: { labels: [], datasets: [] },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top',
+                                align: 'start',
+                                labels: {
+                                    color: 'var(--dark)',
+                                    font: {
+                                        family: "'Montserrat', sans-serif",
+                                        size: 13,
+                                        weight: '500'
+                                    },
+                                    boxWidth: 16,
+                                    boxHeight: 16,
+                                    padding: 12,
+                                    usePointStyle: true,
+                                    pointStyle: 'rectRounded'
+                                },
+                                title: {
+                                    display: false
+                                }
+                            },
+                            tooltip: {
+                                backgroundColor: 'var(--dark)',
+                                titleFont: { family: "'Playfair Display', serif", size: 14 },
+                                bodyFont: { family: "'Montserrat', sans-serif", size: 13 },
+                                padding: 12,
+                                cornerRadius: 8,
+                                displayColors: true,
+                                callbacks: {
+                                    label: function(context) {
+                                        return `${context.dataset.label}: ${context.parsed.y.toLocaleString()} ₽`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Значение показателя',
+                                    color: 'var(--dark)',
+                                    font: {
+                                        family: "'Montserrat', sans-serif",
+                                        size: 14,
+                                        weight: '600'
+                                    },
+                                    padding: 15
+                                },
+                                grid: {
+                                    color: 'rgba(30, 41, 59, 0.07)',
+                                    drawTicks: false
+                                },
+                                ticks: {
+                                    color: 'var(--gray)',
+                                    font: { family: "'Montserrat', sans-serif", size: 12 },
+                                    padding: 8,
+                                    callback: value => `${value.toLocaleString('ru-RU').replace(/,/g, ' ')} ₽`
+                                }
+                            },
+                            x: {
+                                display: false,
+                                grid: { display: false }
+                            }
+                        },
+                        layout: {
+                            padding: {
+                                top: 15,
+                                bottom: 20
+                            }
+                        },
+                        elements: {
+                            bar: {
+                                borderWidth: 0,
+                                borderRadius: 6,
+                                borderSkipped: false
+                            }
+                        }
+                    }
+                });
+            }
+
+            initChart();
+
+            // Обработчик кнопки сравнения
+            compareBtn.addEventListener('click', function() {
+                const selectedIds = selectedOrgIds;
+                const selectedIndicator = chartColumnSelector.value;
+                const selectedYear = yearSelector.value;
+
+                if (selectedIds.length === 0) {
+                    alert('Пожалуйста, выберите хотя бы одну организацию для сравнения');
+                    return;
+                }
+                if (selectedIds.length > 5) {
+                    alert('Можно выбрать не более 5 организаций для сравнения');
+                    return;
+                }
+                if (!selectedIndicator) {
+                    alert('Пожалуйста, выберите показатель для сравнения');
+                    return;
+                }
+                if (!selectedYear) {
+                    alert('Пожалуйста, выберите год для сравнения');
+                    return;
+                }
+
+                const selectedOrgs = organizations.filter(org => selectedIds.includes(org.id));
+                updateChart(selectedOrgs, selectedIndicator, selectedYear);
+                updateUniversitiesList(selectedOrgs);
+            });
+
+            // Функция обновления графика на основе выбранных организаций
+            function updateChart(selectedOrgs, indicator, year) {
+                const indicatorName = allIndicators.find(ind => ind.code === indicator)?.name || indicator;
+                
+                const labels = [''];
+                const datasets = [];
+                const colors = ['#2563eb', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'];
+
+                selectedOrgs.forEach((org, index) => {
+                    const orgData = financialData.find(item => 
+                        item.name === org.name && item.year === parseInt(year)
+                    );
+                    
+                    if (orgData && orgData[indicator] !== undefined) {
+                        datasets.push({
+                            label: org.name,
+                            data: [orgData[indicator]],
+                            backgroundColor: colors[index % colors.length],
+                            borderColor: colors[index % colors.length],
+                            borderWidth: 1,
+                            borderRadius: 4,
+                            categoryPercentage: 0.8,
+                            barPercentage: 0.9
+                        });
+                    }
+                });
+
+                document.getElementById('chartTitle').textContent = 
+                    `Сравнение ${indicatorName} за ${year} год`;
+
+                financialChart.data.labels = labels;
+                financialChart.data.datasets = datasets;
+                financialChart.update();
+            }
+
+            // Функция обновления списка карточек выбранных организаций
+            function updateUniversitiesList(selectedOrgs) {
+                universitiesList.innerHTML = '';
+                selectedOrgs.forEach(org => {
+                    const card = document.createElement('div');
+                    card.className = 'university-mini-card';
+                    card.innerHTML = `
+                        <div class="university-mini-name">${org.name}</div>
+                        <div class="university-mini-meta">
+                            <span class="university-mini-type ${org.institution_type.toLowerCase()}">${org.institution_type}</span>
+                            <span class="university-mini-location"><i class="fas fa-map-marker-alt"></i> ${org.address}</span>
+                        </div>
+                        <a href="university-details" class="view-details-btn" data-id="${org.id}">
+                            <i class="fas fa-external-link-alt"></i> Подробнее
+                        </a>
+                    `;
+                    universitiesList.appendChild(card);
+                });
+
+                document.querySelectorAll('.view-details-btn').forEach(btn => {
+                    btn.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        const id = parseInt(this.getAttribute('data-id'));
+                        const org = organizations.find(o => o.id === id);
+                        if (org) {
+                            localStorage.setItem('selectedOrganization', JSON.stringify(org));
+                            window.location.href = 'university-details';
+                        }
+                    });
+                });
+            }
+        });
+    </script>
+</body>
+</html>

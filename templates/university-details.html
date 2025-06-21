@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Детали организации</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --secondary: #10b981;
+            --accent: #f59e0b;
+            --dark: #1e293b;
+            --light: #f8fafc;
+            --gray: #94a3b8;
+            --card-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Montserrat', sans-serif; color: var(--dark); background-color: var(--light); line-height: 1.6; }
+        .container { width: 100%; max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+        .back-btn { display: inline-flex; align-items: center; gap: 8px; margin: 30px 0; color: var(--primary); text-decoration: none; font-weight: 500; transition: 0.3s; }
+        .back-btn:hover { color: var(--primary-dark); }
+        .header { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; padding: 40px; border-radius: 12px; margin-bottom: 30px; position: relative; overflow: hidden; box-shadow: var(--card-shadow); }
+        .header h1 { font-family: 'Playfair Display', serif; font-size: 36px; margin-bottom: 10px; position: relative; z-index: 1; }
+        .header p { font-size: 16px; position: relative; z-index: 1; }
+        .info { background-color: white; border-radius: 12px; padding: 30px; box-shadow: var(--card-shadow); margin-bottom: 30px; }
+        .info-item { margin-bottom: 15px; }
+        .info-label { font-size: 14px; color: var(--gray); margin-bottom: 5px; }
+        .info-value { font-size: 16px; font-weight: 500; }
+        .chart-container { background-color: white; border-radius: 12px; padding: 30px; box-shadow: var(--card-shadow); }
+        .chart-wrapper { position: relative; height: 300px; width: 100%; }
+        .chart-selector {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 2px solid var(--primary);
+            border-radius: 8px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 14px;
+            background-color: white;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="container header-container">
+            <div class="logo">
+                <div class="logo-icon"><i class="fas fa-chart-line"></i></div>
+                <div class="logo-text">
+                    <h1>ФинАтлас</h1>
+                    <p>Финансовый мониторинг организаций</p>
+                </div>
+            </div>
+            <nav>
+                <ul>
+                    <li class="main-button-page"><a href="/"><i class="fas fa-home"></i> Главная</a></li>
+                    <li><a href="comparison" class="nav-btn"><i class="fas fa-chart-bar"></i> Сравнить</a></li>
+                    <li><a href="download-excel" class="nav-btn"><i class="fas fa-file-excel"></i> Скачать Excel</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+    
+    <div class="container">
+        <a href="/" class="back-btn"><i class="fas fa-arrow-left"></i> Назад к поиску</a>
+        <div class="header">
+            <h1 id="org-name">Название организации</h1>
+            <p>
+                <span id="org-type">Тип учреждения</span> —
+                <span id="org-kind">Вид учреждения</span>
+            </p>
+        </div>
+        <div class="info">
+            <div class="info-item">
+                <div class="info-label">Основные виды деятельности</div>
+                <div class="info-value" id="org-activities">Деятельность</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Адрес</div>
+                <div class="info-value" id="org-address">Адрес</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Email</div>
+                <div class="info-value" id="org-email">Email</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Сайт организации</div>
+                <div class="info-value"><a id="org-website" href="#" target="_blank">Перейти на сайт</a></div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Ссылка на гос. реестр</div>
+                <div class="info-value"><a id="gov-website" href="#" target="_blank">Перейти на сайт</a></div>
+            </div>
+        </div>       
+        <div class="chart-container">
+            <h2 style="font-family: 'Playfair Display', serif; font-size: 24px; color: var(--primary); margin-bottom: 20px;">
+                Динамика финансовых показателей
+            </h2>
+            <select id="chartColumnSelector" class="chart-selector">
+                <!-- <option-list></option-list> -->
+                <!-- <option value="saldo_end">Остаток на конец (млн руб.)</option>
+                <option value="saldo_start">Остаток на начало (млн руб.)</option> -->
+                <!-- Добавьте другие столбцы по необходимости -->
+            </select>
+            <div class="chart-wrapper">
+                <canvas id="financialChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-col">
+                    <h4>ФинАтлас</h4>
+                    <p style="color: var(--gray); margin-bottom: 15px; font-size: 14px;">
+                        Система мониторинга финансовых показателей учреждений
+                    </p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>© 2025 ФинАтлас</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+        
+        // Загрузка наименований финансовых показателей
+        fetch('/api/indicators')
+        .then(response => response.json())
+        .then(data => {
+            const sortedEntries = Object.entries(data).sort((a, b) => a[0].localeCompare(b[0]));
+            const options = sortedEntries
+                .map(([code, name]) => `<option value="code_${code}">${code} - ${name}</option>`)
+                .join('');
+            document.getElementById('chartColumnSelector').innerHTML = options;
+        })
+        .catch(error => console.error('Ошибка загрузки индикаторов:', error));
+
+            let financialChart = null;
+            let orgData = [];
+    
+            // Загрузка данных организации
+            const org = JSON.parse(localStorage.getItem('selectedOrganization'));
+            if (org) {
+                document.getElementById('org-name').textContent = org.name;
+                document.getElementById('org-type').textContent = org.institution_type;
+                document.getElementById('org-kind').textContent = org.institution_kind;
+                document.getElementById('org-activities').textContent = org.main_activities;
+                document.getElementById('org-address').textContent = org.address;
+                document.getElementById('org-email').textContent = org.email;
+                document.getElementById('org-website').textContent = org.website;
+                document.getElementById('org-website').href = org.website;
+                document.getElementById('gov-website').textContent = org.gov_link;
+                document.getElementById('gov-website').href = org.gov_link;
+            }
+    
+            // Загрузка данных для графика
+            fetch('/api/chart_data')
+                .then(response => response.json())
+                .then(data => {
+                    orgData = data.filter(item => item.name === org.name)
+                        .sort((a, b) => a.year - b.year);
+
+                    const chartContainer = document.querySelector('.chart-container');
+                    
+                    if (orgData.length === 0) {
+                        chartContainer.style.display = 'none';
+                    } else {
+                        chartContainer.style.display = 'block';
+                        document.querySelector('#chartColumnSelector [value="code_1000"]').selected = true;
+                        updateChart('code_1000'); // Инициализация с первым столбцом
+                    }
+                })
+                .catch(error => console.error('Ошибка загрузки данных графика:', error));
+    
+            // Обработчик изменения выбора столбца
+            document.getElementById('chartColumnSelector').addEventListener('change', function() {
+                updateChart(this.value);
+            });
+    
+            function updateChart(selectedColumn) {
+                const ctx = document.getElementById('financialChart').getContext('2d');
+                const selectedOption = document.querySelector(`#chartColumnSelector option[value="${selectedColumn}"]`);
+                
+                // Уничтожаем предыдущий график
+                if (financialChart) {
+                    financialChart.destroy();
+                }
+    
+                // Создаем новый график
+                financialChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: orgData.map(item => item.year),
+                        datasets: [{
+                            label: selectedOption.textContent,
+                            data: orgData.map(item => item[selectedColumn]),
+                            backgroundColor: 'rgba(37, 99, 235, 0.2)',
+                            borderColor: 'var(--primary)',
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                ticks: {
+                                    callback: value => `${value.toLocaleString('ru-RU').replace(/,/g, ' ')} ₽`
+                                }
+                            },
+                            x: {
+                                ticks: {
+                                    autoSkip: false,
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        });
+    </script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</body>
+</html>

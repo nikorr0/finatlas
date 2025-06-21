@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ФинАтлас | Финансовый мониторинг организаций</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="container header-container">
+            <div class="logo">
+                <div class="logo-icon"><i class="fas fa-chart-line"></i></div>
+                <div class="logo-text">
+                    <h1>ФинАтлас</h1>
+                    <p>Финансовый мониторинг организаций</p>
+                </div>
+            </div>
+            <nav>
+                <ul>
+                    <li class="main-button-page"><a href="/"><i class="fas fa-home"></i> Главная</a></li>
+                    <li><a href="comparison" class="nav-btn"><i class="fas fa-chart-bar"></i> Сравнить</a></li>
+                    <li><a href="download-excel" class="nav-btn"><i class="fas fa-file-excel"></i> Скачать Excel</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+
+    <!-- Hero Section -->
+    <section class="hero fade-in">
+        <div class="container">
+            <h2 class="delay-1">Финансовые показатели организаций</h2>
+            <!-- <p class="delay-2">Анализ бюджетов и финансовой деятельности учреждений</p> -->
+             <p class="delay-2">На платформе доступно <span id="plans-count">0</span> плана финансово-хозяйственной деятельности</p>
+        </div>
+    </section>
+
+    <!-- Search Section -->
+    <div class="container">
+        <section class="search-section fade-in delay-2">
+            <div class="search-container">
+                <div class="search-input">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" placeholder="Введите название организации...">
+                </div>
+                <button class="search-btn">
+                    <i class="fas fa-search"></i> Найти
+                </button>
+            </div>
+            <div class="filters">
+                <div class="filter-select">
+                    <select id="type-filter">
+                        <option value="">Все виды</option>
+                        <option value="Университет">Университет</option>
+                        <option value="Академия">Академия</option>
+                        <option value="Институт">Институт</option>
+                    </select>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container">
+            <h2 class="content-title">Организации на карте</h2>
+            <div class="content-grid">
+                <!-- Sidebar со списком организаций -->
+                <div class="sidebar">
+                    <div class="sidebar-header">
+                        <h3>Найдено организаций</h3>
+                        <span class="results-count">0</span>
+                    </div>
+                    <div class="sidebar-list" id="sidebar-list">
+
+                    </div>
+                </div>
+                <!-- Секция с картой -->
+                <div class="map-container">
+                    <div id="map"></div>
+                    <div class="map-legend">
+                        <div class="legend-item">
+                            <div class="legend-icon university-icon"></div>
+                            <span>Университет</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-icon academy-icon"></div>
+                            <span>Академия</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-icon institute-icon"></div>
+                            <span>Институт</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-col">
+                    <h4>ФинАтлас</h4>
+                    <p style="color: var(--gray); margin-bottom: 15px; font-size: 14px;">
+                        Система мониторинга финансовых показателей учреждений
+                    </p>
+                    <a href="logging" >Логирование</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>© 2025 ФинАтлас</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script>
+        // Вывод количества собранных файлов ПФХД
+        const counterEl = document.getElementById('plans-count');
+        fetch('/api/chart_data')
+        .then(response => {
+            if (!response.ok) throw new Error('Ошибка сети');
+            return response.json();
+        })
+        .then(data => {
+            counterEl.textContent = animateCount(counterEl, data.length, 1500);
+        });
+        
+        // Анимация количества
+        function animateCount(el, to, duration = 1000) {
+            const start = 0;
+            const startTs = performance.now();
+            function step(now) {
+            const progress = Math.min(Math.abs(now - startTs) / duration, 1);
+            el.textContent = Math.floor(progress * (to - start) + start);
+            if (progress < 1) requestAnimationFrame(step);
+            }
+            requestAnimationFrame(step);
+        }
+
+        // Инициализация карты
+        const map = L.map('map').setView([55.7558, 37.6173], 4);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            maxZoom: 18,
+        }).addTo(map);
+        map.zoomControl.setPosition('topright');
+
+        let organizations = [];
+        const markers = {};
+        const sidebarList = document.getElementById('sidebar-list');
+
+        // Функция для создания карточки в sidebar
+        function createSidebarCard(org) {
+            const card = document.createElement('div');
+            card.className = 'university-card';
+            card.setAttribute('data-id', org.id);
+            card.innerHTML = `
+                <h4>${org.name}</h4>
+                <div class="university-meta">
+                    <span class="university-type ${org.institution_type.toLowerCase()}">${org.institution_type}</span>
+                    <span class="university-location"><i class="fas fa-map-marker-alt"></i> ${org.address}</span>
+                </div>
+            `;
+            card.addEventListener('click', function() {
+                // Перелет карты к выбранной организации
+                map.flyTo([org.latitude, org.longitude], 12, { duration: 1 });
+                // Подсветка карточки
+                document.querySelectorAll('.university-card').forEach(c => c.classList.remove('active'));
+                card.classList.add('active');
+                // Открываем popup маркера
+                markers[org.id].openPopup();
+                // Сохраняем выбранную организацию для перехода на details
+                localStorage.setItem('selectedOrganization', JSON.stringify(org));
+            });
+            return card;
+        }
+
+     // Загрузка данных об организациях
+    fetch('/api/organizations')
+    .then(response => {
+        if (!response.ok) throw new Error('Ошибка сети');
+        return response.json();
+    })
+    .then(data => {
+        organizations = data;
+        localStorage.setItem('organizations', JSON.stringify(data));
+        
+        let successfulOrgs = 0; // Счетчик успешно обработанных организаций
+        
+        data.forEach(org => {
+            try {
+                // Проверка наличия обязательных полей
+                if (org.latitude == 'Информация не найдена') {
+                    console.warn(`Пропущена организация (недостаточно данных): ${org.id || 'неизвестный ID'}`);
+                    return; // Пропускаем
+                }
+
+                // Создание маркера с выбором цвета по типу учреждения
+                let iconColor = (org.institution_type === 'Университет') ? '#2563eb' :
+                                (org.institution_type === 'Академия') ? '#10b981' : '#f59e0b';
+                
+                const marker = L.marker([org.latitude, org.longitude], {
+                    icon: L.divIcon({
+                        className: 'university-marker',
+                        html: `<div style="background-color: ${iconColor}"></div>`,
+                        iconSize: [24, 24],
+                        iconAnchor: [12, 12]
+                    })
+                }).addTo(map);
+
+                // Привязка popup с краткой информацией
+                marker.bindPopup(`
+                    <div style="min-width: 250px; padding: 10px;">
+                        <h3 style="margin: 0 0 10px; font-size: 16px;">${org.name}</h3>
+                        <p style="margin: 0 0 8px; font-size: 14px;"><i class="fas fa-map-marker-alt" style="margin-right: 5px;"></i> ${org.address || 'Адрес не указан'}</p>
+                        <p style="margin: 0 0 8px; font-size: 14px;"><i class="fas fa-envelope" style="margin-right: 5px;"></i> ${org.email || 'Email не указан'}</p>
+                        <div style="margin-top: 15px;">
+                            <a href="university-details" 
+                            class="details-link" 
+                            data-org='${JSON.stringify(org).replace(/'/g, "&#39;")}'
+                            style="display: inline-block; padding: 5px 10px; background-color: ${iconColor}; color: white; text-decoration: none; border-radius: 4px; font-size: 13px;">
+                                Подробнее
+                            </a>
+                        </div>
+                    </div>
+                `);
+
+                markers[org.id] = marker;
+                
+                // Добавление карточки в sidebar (если функция существует)
+                if (typeof createSidebarCard === 'function') {
+                    const card = createSidebarCard(org);
+                    if (card) sidebarList.appendChild(card);
+                }
+
+                successfulOrgs++; // Увеличиваем счетчик успешных обработок
+            } catch (err) {
+                console.warn(`Ошибка при обработке организации ${org.id || 'неизвестный ID'}:`, err.message);
+            }
+        });
+
+        // Обновление счетчика найденных организаций (только успешных)
+        document.querySelector('.results-count').textContent = successfulOrgs;
+    })
+    .catch(error => {
+        console.error('Ошибка получения данных организаций:', error);
+        // Можно загрузить данные из localStorage, если API не отвечает
+        const cachedOrgs = localStorage.getItem('organizations');
+        if (cachedOrgs) {
+            console.log('Используются кэшированные данные');
+            organizations = JSON.parse(cachedOrgs);
+        }
+    });
+
+        // Обработка поиска и фильтров
+        function searchOrganizations() {
+            const query = document.querySelector('.search-input input').value.toLowerCase();
+            const typeFilter = document.getElementById('type-filter').value;
+            
+            let visibleCount = 0;
+            
+            organizations.forEach(univ => {
+                const marker = markers[univ.id];
+                const card = document.querySelector(`.university-card[data-id="${univ.id}"]`);
+                
+                const nameMatch = univ.name.toLowerCase().includes(query);
+                const typeMatch = !typeFilter || univ.institution_type === typeFilter;
+                
+                if ((!query || nameMatch) && typeMatch) {
+                    if (marker) marker.addTo(map);
+                    if (card) card.style.display = 'block';
+                    visibleCount++;
+                } else {
+                    if (marker) map.removeLayer(marker);
+                    if (card) card.style.display = 'none';
+                }
+            });
+            
+            // Update results count
+            document.querySelector('.results-count').textContent = visibleCount;
+        }
+
+        document.querySelector('.search-btn').addEventListener('click', searchOrganizations);
+        document.querySelector('.search-input input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') searchOrganizations();
+        });
+        document.getElementById('type-filter').addEventListener('change', searchOrganizations);
+
+        // Обработчик для кнопок "Подробнее" в popup
+        document.addEventListener('click', function(e) {
+            const detailsLink = e.target.closest('.details-link');
+            if (detailsLink) {
+                e.preventDefault();
+                const orgJson = detailsLink.dataset.org;
+                localStorage.setItem('selectedOrganization', orgJson);
+                window.location.href = detailsLink.getAttribute('href');
+            }
+        });
+    </script>
+</body>
+</html>

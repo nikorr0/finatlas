@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Логирование | ФинАтлас</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Общие стили проекта -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="container header-container">
+            <div class="logo">
+                <div class="logo-icon"><i class="fas fa-chart-line"></i></div>
+                <div class="logo-text">
+                    <h1>ФинАтлас</h1>
+                    <p>Финансовый мониторинг организаций</p>
+                </div>
+            </div>
+            <nav>
+                <ul>
+                    <li class="main-button-page"><a href="/"><i class="fas fa-home"></i> Главная</a></li>
+                    <li><a href="comparison" class="nav-btn"><i class="fas fa-chart-bar"></i> Сравнить</a></li>
+                    <li><a href="download-excel" class="nav-btn"><i class="fas fa-file-excel"></i> Скачать Excel</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container" style="flex:1 0 auto;">
+        <div class="page-header-logging">
+            <h1>Логирование</h1>
+        </div>
+        <div class="log-wrapper" style="min-height:70vh;">
+            <textarea id="log-area" class="log-area" readonly>
+--- здесь будут отображаться логи работы системы ---
+            </textarea>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-col">
+                    <h4>ФинАтлас</h4>
+                    <p style="color: var(--gray); margin-bottom: 15px; font-size: 14px;">
+                        Система мониторинга финансовых показателей учреждений
+                    </p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>© 2025 ФинАтлас</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const logArea   = document.getElementById('log-area');
+            const THRESHOLD = 10;   // px — зона, в которой считаем, что пользователь «на дне»
+            let autoScroll  = true; // текущее состояние автоскролла
+
+            // Проверяем, находимся ли мы внизу
+            function isAtBottom() {
+                return (logArea.scrollHeight - logArea.scrollTop - logArea.clientHeight) <= THRESHOLD;
+            }
+
+            // Отслеживаем пользовательскую прокрутку, чтобы определить момент отключения/включения
+            logArea.addEventListener('scroll', () => {
+                autoScroll = isAtBottom();
+            });
+
+            // Подключаемся к SSE‑потоку
+            const source = new EventSource('/stream-logs');
+
+            source.onmessage = e => {
+                logArea.value += `\n${e.data}`;
+
+                // Прокручиваем только если пользователь «на дне»
+                if (autoScroll) {
+                    logArea.scrollTop = logArea.scrollHeight;
+                }
+            };
+
+            source.onerror = err => console.error('SSE error:', err);
+        });
+    </script>
+</body>
+</html>

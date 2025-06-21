@@ -1,0 +1,13 @@
+__pycache__/
+venv/
+venv-new/
+TEST/
+resources/ПФХД_html/
+resources/ПФХД_pdf/
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+.env
+.git
+.gitignore
