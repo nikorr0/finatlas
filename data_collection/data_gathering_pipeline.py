@@ -187,23 +187,30 @@ def gather_plans_data_pdf():
         
         pdf_links_checked = list()
         
-        pdf_links = download_correct_file(url, allowed_years=allowed_years)
-        if pdf_links:
-            for pdf_link in pdf_links:
-                readable = check_file_readability(pdf_link, allowed_years=allowed_years)
-                logger_print(f"Найден файл: {pdf_link} (Читабельный: {readable})")
-                if readable:
-                    pdf_links_checked.append(pdf_link)
+        try:
+            pdf_links = download_correct_file(url, allowed_years=allowed_years)
+            if pdf_links:
+                for pdf_link in pdf_links:
+                    readable = check_file_readability(pdf_link, allowed_years=allowed_years)
+                    logger_print(f"Найден файл: {pdf_link} (Читабельный: {readable})")
+                    if readable:
+                        pdf_links_checked.append(pdf_link)
+        except:
+            logger_print("Подходящие файлы не найдены")
+            continue
         
         if not pdf_links:
             logger_print("Подходящие файлы не найдены")
         
         for pdf_link in pdf_links_checked:
-            response = requests.get(pdf_link, headers=HEADERS, timeout=10)
-            response.raise_for_status()
-            filename = f"{name}_{str(round(time.time(), 2))}.pdf"
-            with open(FOLDER_TO_SAVE_PDF + filename, 'wb') as f:
-                f.write(response.content)
+            try:
+                response = requests.get(pdf_link, headers=HEADERS, timeout=20)
+                response.raise_for_status()
+                filename = f"{name}_{str(round(time.time(), 2))}.pdf"
+                with open(FOLDER_TO_SAVE_PDF + filename, 'wb') as f:
+                    f.write(response.content)
+            except:
+                continue
             
             try:
                 name_date_filename = list(get_name_and_year_from_pdf(FOLDER_TO_SAVE_PDF + filename, return_plan_year=True)) + [filename]
